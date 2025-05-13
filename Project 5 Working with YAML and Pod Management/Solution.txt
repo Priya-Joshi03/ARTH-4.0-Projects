@@ -1,0 +1,97 @@
+Project 5: Working with YAML and Pod Management
+Objective:
+ Learn to interact with Kubernetes using declarative YAML configuration and basic resource management practices.
+Tasks:
+Create a YAML file to define and deploy a Pod.
+Practice launching, deleting, and recreating Pods.
+Understand declarative vs imperative management in Kubernetes.
+Use kubectl to apply and update configurations.
+_________________________________________________________________________
+
+C:\Users\Priya Joshi>minikube start
+* minikube v1.32.0 on Microsoft Windows 10 Pro 10.0.19045 Build 19045
+* Using the docker driver based on existing profile
+* Starting control plane node minikube in cluster minikube
+* Restarting existing docker container for "minikube" ...
+* Preparing Kubernetes v1.28.3 on Docker 24.0.7 ...
+  - kubelet.housekeeping-interval=5s
+* Verifying Kubernetes components...
+* Enabled addons: default-storageclass, storage-provisioner
+* Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+
+C:\Users\Priya Joshi>cd k8s-labs
+
+C:\Users\Priya Joshi\k8s-labs>notepad pod-demo.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-pod
+spec:
+  containers:
+  - name: hello-container
+    image: nginx
+    ports:
+    - containerPort: 80
+
+C:\Users\Priya Joshi\k8s-labs>kubectl apply -f pod-demo.yaml
+pod/hello-pod created
+
+C:\Users\Priya Joshi\k8s-labs>kubectl get pods
+NAME         READY   STATUS    RESTARTS   AGE
+hello-pod    1/1     Running   0          12s
+
+C:\Users\Priya Joshi\k8s-labs>kubectl describe pod hello-pod
+Name:             hello-pod
+Namespace:        default
+Status:           Running
+IP:               172.17.0.4
+Containers:
+  hello-container:
+    Image:        nginx
+    Port:         80/TCP
+    State:        Running
+
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  14s   default-scheduler  Successfully assigned default/hello-pod to minikube
+  Normal  Pulled     13s   kubelet            Container image "nginx" already present on machine
+  Normal  Started    12s   kubelet            Started container hello-container
+
+C:\Users\Priya Joshi\k8s-labs>kubectl delete pod hello-pod
+pod "hello-pod" deleted
+
+C:\Users\Priya Joshi\k8s-labs>kubectl get pods
+No resources found in default namespace.
+
+C:\Users\Priya Joshi\k8s-labs>kubectl apply -f pod-demo.yaml
+pod/hello-pod created
+
+
+C:\Users\Priya Joshi\k8s-labs>kubectl get pods -o wide
+NAME         READY   STATUS    RESTARTS   AGE   IP           NODE       NOMINATED NODE   READINESS GATES
+hello-pod    1/1     Running   0          5s    172.17.0.5   minikube   <none>           <none>
+
+
+C:\Users\Priya Joshi\k8s-labs>notepad pod-demo.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-pod
+spec:
+  containers:
+  - name: hello-container
+    image: nginx:1.25
+    ports:
+    - containerPort: 80
+
+C:\Users\Priya Joshi\k8s-labs>kubectl apply -f pod-demo.yaml
+pod/hello-pod configured
+
+C:\Users\Priya Joshi\k8s-labs>kubectl delete -f pod-demo.yaml
+pod "hello-pod" deleted
+
+C:\Users\Priya Joshi\k8s-labs>minikube stop
+* Stopping node "minikube" ...
+* 1 nodes stopped.

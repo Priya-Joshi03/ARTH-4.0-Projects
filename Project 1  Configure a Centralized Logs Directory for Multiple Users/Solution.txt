@@ -1,0 +1,75 @@
+Project 1 : Configure a Centralized Logs Directory for Multiple Users
+
+Objective:
+Design and configure a centralized logs directory where multiple users can store their log files. Users should not be able to delete or modify files created by others, but they should still have the ability to add their own files.
+Tasks:
+Create a directory called /central_logs where all users can store their logs.
+Ensure that users have write access to the directory.
+Configure permissions so that a user cannot delete or modify files created by another user.
+Add test users user1 and user2 to validate the configuration.
+Verify the following:
+user1 can create a file in /central_logs.
+user2 cannot delete user1's file but can still create their own file.
+Both users can list files in the directory without errors.
+_________________________________________________________________________
+
+[root@localhost ~]# mkdir /central_logs
+
+[root@localhost ~]# chmod 1777 /central_logs
+
+[root@localhost ~]# ls -ld /central_logs
+drwxrwxrwt. 2 root root 4096 May 12 10:01 /central_logs
+
+[root@localhost ~]# useradd user1
+
+[root@localhost ~]# useradd user2
+
+[root@localhost ~]# passwd user1
+New password:
+Retype new password:
+passwd: all authentication tokens updated successfully.
+
+[root@localhost ~]# passwd user2
+New password:
+Retype new password:
+passwd: all authentication tokens updated successfully.
+
+[root@localhost ~]# su - user1
+[user1@localhost ~]$ cd /central_logs
+
+[user1@localhost central_logs]$ echo "This is a log file by user1" > user1_log.txt
+
+[user1@localhost central_logs]$ ls -l
+total 4
+-rw-r--r--. 1 user1 user1 29 May 12 10:05 user1_log.txt
+
+[user1@localhost central_logs]$ exit
+logout
+
+[root@localhost ~]# su - user2
+[user2@localhost ~]$ cd /central_logs
+
+[user2@localhost central_logs]$ rm user1_log.txt
+rm: cannot remove 'user1_log.txt': Operation not permitted
+
+[user2@localhost central_logs]$ echo "Log from user2" > user2_log.txt
+
+[user2@localhost central_logs]$ ls -l
+total 8
+-rw-r--r--. 1 user1 user1 29 May 12 10:05 user1_log.txt
+-rw-r--r--. 1 user2 user2 16 May 12 10:07 user2_log.txt
+
+[user2@localhost central_logs]$ exit
+logout
+
+[root@localhost ~]# su - user1
+[user1@localhost ~]$ ls -l /central_logs
+total 8
+-rw-r--r--. 1 user1 user1 29 May 12 10:05 user1_log.txt
+-rw-r--r--. 1 user2 user2 16 May 12 10:07 user2_log.txt
+
+[user1@localhost ~]$ exit
+logout
+
+_________________________________________________________________________
+

@@ -1,0 +1,116 @@
+Project 6: Set Up a Multi-Node Kubernetes Cluster Automatically with Jenkins
+Objective:
+ Automate the deployment of a multi-node Kubernetes cluster using Jenkins.
+Tasks:
+Install Jenkins and required plugins (Kubernetes, Docker).
+Create a Jenkins pipeline to automate Kubernetes setup on master and worker nodes.
+Use Ansible or shell scripts to install and configure Kubernetes components (kubeadm, kubelet, kubectl).
+Automate the addition of worker nodes to the cluster.
+Test and verify the cluster setup and node communication.
+______________________________________________________________
+multi-node-k8s-automation/
+├── Jenkinsfile
+├── scripts/
+│   ├── k8s_master_setup.sh
+│   └── k8s_worker_setup.sh
+└── README.md
+
+Jenkinsfile
+pipeline {
+    agent any
+    environment {
+        MASTER_IP = "192.168.56.101"
+        WORKER_IP = "192.168.56.102"
+        USER = "root"
+    }
+    stages {
+        stage('Prepare SSH Access') {
+            steps {
+                sshagent(['k8s-key']) {
+                    sh 'ssh -o StrictHostKeyChecking=no $USER@$MASTER_IP "hostname"'
+                    sh 'ssh -o StrictHostKeyChecking=no $USER@$WORKER_IP "hostname"'
+                }
+            }
+        }
+        stage('Install Kubernetes - Master') {
+            steps {
+                sshagent(['k8s-key']) {
+                    sh 'ssh $USER@$MASTER_IP "bash -s"' < scripts/k8s_master_setup.sh
+                }
+            }
+        }
+        stage('Install Kubernetes - Worker') {
+            steps {
+                sshagent(['k8s-key']) {
+                    sh 'ssh $USER@$WORKER_IP "bash -s"' < scripts/k8s_worker_setup.sh
+                }
+            }
+        }
+        stage('Join Worker to Cluster') {
+            steps {
+                sshagent(['k8s-key']) {
+                    script {
+                        def joinCmd = sh(
+                            script: "ssh $USER@$MASTER_IP 'kubeadm token create --print-join-command'",
+                            returnStdout: true
+                        ).trim()
+                        sh "ssh $USER@$WORKER_IP '${joinCmd}'"
+                    }
+                }
+            }
+        }
+        stage('Verify Cluster') {
+            steps {
+                sshagent(['k8s-key']) {
+                    sh 'ssh $USER@$MASTER_IP "kubectl get nodes"'
+                }
+            }
+        }
+    }
+}
+
+k8s_master_setup.sh
+#!/bin/bash
+swapoff -a
+apt update && apt install -y docker.io apt-transport-https curl
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+cat <<EOF | tee /etc/apt/sources.list.d/kubernetes.list
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+apt update
+apt install -y kubelet kubeadm kubectl
+kubeadm init --apiserver-advertise-address=192.168.56.101 --pod-network-cidr=192.168.0.0/16
+
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+export KUBECONFIG=$HOME/.kube/config
+
+kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml
+
+k8s_worker_setup.sh
+#!/bin/bash
+swapoff -a
+apt update && apt install -y docker.io apt-transport-https curl
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+cat <<EOF | tee /etc/apt/sources.list.d/kubernetes.list
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+apt update
+apt install -y kubelet kubeadm kubectl
+
+| Node       | IP              |
+|------------|-----------------|
+| Jenkins    | 192.168.56.100  |
+| Master     | 192.168.56.101  |
+| Worker     | 192.168.56.102  |
+
+NAME     STATUS   ROLES           AGE   VERSION
+master   Ready    control-plane   3m    v1.28.0
+worker   Ready    <none>          2m    v1.28.0
+
+Structure
+multi-node-k8s-automation/
+├── Jenkinsfile
+├── scripts/
+│   ├── k8s_master_setup.sh
+└── k8s_worker_setup.sh

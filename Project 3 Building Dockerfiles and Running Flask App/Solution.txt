@@ -1,0 +1,96 @@
+Project 3: Building Dockerfiles and Running Flask App
+Objective:
+ Learn to write and understand Dockerfiles for Flask-based apps, and explore how environment variables and entry points work in containers.
+Tasks:
+Create a Dockerfile for a basic Flask application.
+Use CMD and ENTRYPOINT to define startup behavior.
+Pass environment variables into containers.
+Build and run Docker containers from the created images.
+Test command-line input and explore container behavior
+_______________________________________________________________________
+
+
+[root@localhost ~]# mkdir flask_docker_app
+[root@localhost ~]# cd flask_docker_app
+
+[root@localhost flask_docker_app]# vim app.py
+[root@localhost flask_docker_app]# cat app.py
+
+from flask import Flask
+import os
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    name = os.getenv("NAME", "World")
+    return f"Hello, {name}!"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
+
+[root@localhost flask_docker_app]# vim requirements.txt
+[root@localhost flask_docker_app]# cat requirements.txt
+
+flask
+
+[root@localhost flask_docker_app]# vim Dockerfile
+[root@localhost flask_docker_app]# cat Dockerfile
+
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY . .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+ENV NAME=ContainerWorld
+
+ENTRYPOINT ["python"]
+CMD ["app.py"]
+
+
+[root@localhost flask_docker_app]# docker build -t flask-demo .
+Sending build context to Docker daemon  3.072kB
+Step 1/7 : FROM python:3.9-slim
+ ---> 9c1f322b63e8
+Step 2/7 : WORKDIR /app
+ ---> Running in 61afae8c6fd2
+Removing intermediate container 61afae8c6fd2
+ ---> f03a5de1a4d7
+Step 3/7 : COPY . .
+ ---> 25cd7a4a482a
+Step 4/7 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Running in b4970a83cf6e
+Collecting flask
+...
+Successfully built flask-demo
+
+[root@localhost flask_docker_app]# docker images
+REPOSITORY     TAG       IMAGE ID       CREATED         SIZE
+flask-demo     latest    4e48b5e2b33c   5 seconds ago   124MB
+
+[root@localhost flask_docker_app]# docker run -d -p 5000:5000 flask-demo
+efb74a623d89354bc087e19dc267dff45f5b75e2d4b26ea1be17c3250a4db6cb
+
+[root@localhost flask_docker_app]# curl http://localhost:5000
+Hello, ContainerWorld!
+
+[root@localhost flask_docker_app]# docker stop $(docker ps -q)
+efb74a623d89
+
+[root@localhost flask_docker_app]# docker run -d -p 5000:5000 -e NAME=LinuxChamp flask-demo
+b8ad1546be7645df60d2a917b674f64e68e388a8499c56c060999e053c9dbca1
+
+
+[root@localhost flask_docker_app]# curl http://localhost:5000
+Hello, LinuxChamp!
+
+
+[root@localhost flask_docker_app]# docker ps
+CONTAINER ID   IMAGE        COMMAND        CREATED          STATUS          PORTS                    NAMES
+b8ad1546be76   flask-demo   "python app.py"   10 seconds ago   Up 9 seconds    0.0.0.0:5000->5000/tcp   laughing_goldberg
+
+

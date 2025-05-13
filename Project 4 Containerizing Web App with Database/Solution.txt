@@ -1,0 +1,137 @@
+Project 4: Containerizing Web App with Database
+Objective:
+ Deploy a modern web application (Flask + MySQL) using Docker containers and understand how containers communicate.
+Tasks:
+Launch Docker containers and create custom images.
+Deploy a MySQL container with security settings.
+Containerize a Python Flask app and connect it to the database.
+Create and run Docker images for both app and database.
+Understand team roles in container-based development.
+________________________________________________________________________
+
+[root@localhost ~]# mkdir flask_mysql_app
+[root@localhost ~]# cd flask_mysql_app
+
+[root@localhost flask_mysql_app]# vim app.py
+[root@localhost flask_mysql_app]# cat app.py
+from flask import Flask
+import mysql.connector
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    db = mysql.connector.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME")
+    )
+    cursor = db.cursor()
+    cursor.execute("SELECT message FROM greetings LIMIT 1;")
+    result = cursor.fetchone()
+    return result[0] if result else "No data found"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+
+
+[root@localhost flask_mysql_app]# vim requirements.txt
+
+[root@localhost flask_mysql_app]# cat requirements.txt
+flask
+mysql-connector-python
+
+[root@localhost flask_mysql_app]#vim Dockerfile
+
+[root@localhost flask_mysql_app]# cat Dockerfile
+FROM python:3.9
+
+WORKDIR /app
+
+COPY . .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["python", "app.py"]
+
+[root@localhost flask_mysql_app]# vim init.sql
+[root@localhost flask_mysql_app]# cat init.sql
+CREATE DATABASE IF NOT EXISTS webappdb;
+USE webappdb;
+CREATE TABLE IF NOT EXISTS greetings (id INT AUTO_INCREMENT PRIMARY KEY, message VARCHAR(255));
+INSERT INTO greetings (message) VALUES ('Hello from MySQL Database!');
+
+[root@localhost flask_mysql_app]# vim docker-compose.yml
+[root@localhost flask_mysql_app]# cat docker-compose.yml
+
+version: '3.8'
+
+services:
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: webappdb
+      MYSQL_USER: webuser
+      MYSQL_PASSWORD: webpass
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: webuser
+      DB_PASSWORD: webpass
+      DB_NAME: webappdb
+
+volumes:
+  dbdata:
+
+[root@localhost flask_mysql_app]# docker-compose build
+
+Building web
+Step 1/6 : FROM python:3.9
+ ---> a5b3f1e14c6e
+Step 2/6 : WORKDIR /app
+ ---> Running in 34953cfb6d47
+...
+Successfully built 5c46b67ea9c2
+Successfully tagged flask_mysql_app_web:latest
+
+
+[root@localhost flask_mysql_app]# docker-compose up -d
+
+Creating network "flask_mysql_app_default" with the default driver
+Creating volume "flask_mysql_app_dbdata" with default driver
+Creating flask_mysql_app_db_1 ... done
+Creating flask_mysql_app_web_1 ... done
+
+
+[root@localhost flask_mysql_app]# docker ps
+
+CONTAINER ID   IMAGE                     COMMAND                  STATUS         PORTS                    NAMES
+f3a54ef90b47   flask_mysql_app_web       "python app.py"          Up 8 seconds   0.0.0.0:5000->5000/tcp   flask_mysql_app_web_1
+d4316c1d7b25   mysql:5.7                 "docker-entrypoint.s…"   Up 8 seconds   0.0.0.0:3306->3306/tcp   flask_mysql_app_db_1
+
+[root@localhost flask_mysql_app]# curl http://localhost:5000
+Hello from MySQL Database!
+
+
+[root@localhost flask_mysql_app]# docker-compose down
+Stopping flask_mysql_app_web_1 ... done
+Stopping flask_mysql_app_db_1  ... done
+Removing flask_mysql_app_web_1 ... done
+Removing flask_mysql_app_db_1  ... done
+Removing network flask_mysql_app_default
+

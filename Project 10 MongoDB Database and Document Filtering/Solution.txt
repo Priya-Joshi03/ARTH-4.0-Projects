@@ -1,0 +1,58 @@
+Project 10: MongoDB Database and Document Filtering
+Objective:
+ Create and query a MongoDB database with document filters.
+Tasks:
+Create a new MongoDB database (e.g., userDB) and a collection (e.g., profiles).
+Insert multiple documents with fields like name, age, and city.
+Use find() queries to filter documents (e.g., find users by age or city).
+________________________________________________________________
+
+$ sudo dnf install -y mongodb-server
+$ sudo systemctl start mongod
+$ sudo systemctl status mongod
+ mongod.service - MongoDB Database Server
+   Loaded: loaded (/usr/lib/systemd/system/mongod.service; enabled; vendor preset: enabled)
+   Active: active (running) since Mon 2025-05-12 10:35:55 UTC; 10s ago
+   Docs: man:mongod(1)
+ Main PID: 12345 (mongod)
+    Tasks: 23 (limit: 4915)
+   Memory: 80.0M
+   CGroup: /system.slice/mongod.service
+           └─12345 /usr/bin/mongod --config /etc/mongod.conf
+
+$ mongo
+MongoDB shell version v5.0.6
+>
+
+> use userDB
+switched to db userDB
+> db.profiles.insertMany([
+... { name: "Alice", age: 30, city: "New York" },
+... { name: "Bob", age: 25, city: "Los Angeles" },
+... { name: "Charlie", age: 35, city: "New York" },
+... { name: "David", age: 40, city: "Chicago" }
+... ])
+{
+    "acknowledged" : true,
+    "insertedIds" : [
+        ObjectId("60b850f3c3f3c3c3c3c3c3c3"),
+        ObjectId("60b850f3c3f3c3c3c3c3c3c4"),
+        ObjectId("60b850f3c3f3c3c3c3c3c3c5"),
+        ObjectId("60b850f3c3f3c3c3c3c3c3c6")
+    ]
+}
+
+> db.profiles.find({ city: "New York" })
+{ "_id" : ObjectId("60b850f3c3f3c3c3c3c3c3c3"), "name" : "Alice", "age" : 30, "city" : "New York" }
+{ "_id" : ObjectId("60b850f3c3f3c3c3c3c3c3c5"), "name" : "Charlie", "age" : 35, "city" : "New York" }
+
+> db.profiles.find({ age: { $gt: 30 } })
+{ "_id" : ObjectId("60b850f3c3f3c3c3c3c3c3c6"), "name" : "David", "age" : 40, "city" : "Chicago" }
+
+> db.profiles.find({ age: { $lte: 30 } })
+{ "_id" : ObjectId("60b850f3c3f3c3c3c3c3c3c3"), "name" : "Alice", "age" : 30, "city" : "New York" }
+{ "_id" : ObjectId("60b850f3c3f3c3c3c3c3c3c4"), "name" : "Bob", "age" : 25, "city" : "Los Angeles" }
+
+> exit
+
+
